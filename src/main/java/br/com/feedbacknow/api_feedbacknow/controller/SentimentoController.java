@@ -22,7 +22,7 @@ public class SentimentoController {
         this.sentimentoAnalyzer = sentimentoAnalyzer;
     }
 
-    @PostMapping("/comentario")
+    @PostMapping("/sentiment")
     public ResponseEntity<SentimentoResponse> analyze(@Valid @RequestBody SentimentoRequest request) {
 
         // Chama o serviço que se comunica com o microserviço Python
