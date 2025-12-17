@@ -4,6 +4,7 @@ package br.com.feedbacknow.api_feedbacknow.controller;
 import br.com.feedbacknow.api_feedbacknow.dto.SentimentoRequest;
 import br.com.feedbacknow.api_feedbacknow.dto.SentimentoResponse;
 import br.com.feedbacknow.api_feedbacknow.service.SentimentoAnalyzer;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -22,7 +23,7 @@ public class SentimentoController {
     }
 
     @PostMapping("/comentario")
-    public ResponseEntity<SentimentoResponse> analyze(@RequestBody SentimentoRequest request) {
+    public ResponseEntity<SentimentoResponse> analyze(@Valid @RequestBody SentimentoRequest request) {
 
         // Chama o serviço que se comunica com o microserviço Python
         SentimentoResponse response = sentimentoAnalyzer.analyzeComment(request.getComentario());
