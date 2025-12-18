@@ -3,6 +3,7 @@ package br.com.feedbacknow.api_feedbacknow.controller;
 
 import br.com.feedbacknow.api_feedbacknow.dto.SentimentoRequest;
 import br.com.feedbacknow.api_feedbacknow.dto.SentimentoResponse;
+import br.com.feedbacknow.api_feedbacknow.service.SentimentService;
 import br.com.feedbacknow.api_feedbacknow.service.SentimentoAnalyzer;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -12,14 +13,18 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDateTime;
+
 @RestController
 @RequestMapping("/")
 public class SentimentoController {
 
     private final SentimentoAnalyzer sentimentoAnalyzer;
+    private final SentimentService sentimentService;
 
-    public SentimentoController(SentimentoAnalyzer sentimentoAnalyzer) {
+    public SentimentoController(SentimentoAnalyzer sentimentoAnalyzer, SentimentService sentimentService) {
         this.sentimentoAnalyzer = sentimentoAnalyzer;
+        this.sentimentService = sentimentService;
     }
 
     @PostMapping("/sentiment")
@@ -30,10 +35,19 @@ public class SentimentoController {
 
         if (response == null) {
             // Retorna erro se a comunicação falhou ou o Python retornou algo inesperado
-            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
+            return ResponseEntity.
+                    status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .build();
         }
+        //define (data e hora)
+        response.setTimestamp(LocalDateTime.now());
+        // salva as informacoes no banco
+        sentimentService.saveSentiment(response);
 
+        response.setTimestamp(LocalDateTime.now());
         // Retorna a resposta do Python com status 200 OK
         return ResponseEntity.ok(response);
     }
+
+
 }

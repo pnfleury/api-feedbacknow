@@ -1,0 +1,35 @@
+package br.com.feedbacknow.api_feedbacknow.entity;
+
+import br.com.feedbacknow.api_feedbacknow.domain.Sentiment;
+import br.com.feedbacknow.api_feedbacknow.domain.SentimentType;
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
+import org.hibernate.annotations.CreationTimestamp;
+
+import java.time.LocalDateTime;
+
+@Entity
+@Getter
+@Setter
+@Table(name = "feedbacks")
+public class SentimentEntity {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false, columnDefinition = "TEXT")
+    private String comentario;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private SentimentType sentimento;
+
+    @Column(nullable = false)
+    private Double probabilidade;
+
+    @CreationTimestamp
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime criadoEm;
+}
