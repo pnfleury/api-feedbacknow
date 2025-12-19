@@ -48,18 +48,19 @@ public class CustomExceptionHandler {
                         400
                 ));
     }
-
         // 3. QUALQUER OUTRO ERRO
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErroDetalhe> handleGeneric (Exception ex){
-        logger.error("Erro interno não esperado: ", ex);
-        return ResponseEntity.internalServerError()
-                .body(new ErroDetalhe(
-                        "Erro Interno",
-                        "Ocorreu um erro inesperado no servidor. Por favor, tente novamente mais tarde.",
-                        500
+        @ExceptionHandler(Exception.class)
+        public ResponseEntity<ErroDetalhe> handleGeneric(Exception ex) {
+            logger.error("Erro interno não esperado: ", ex);
+            return ResponseEntity.internalServerError()
+                    .body(new ErroDetalhe(
+                            "Erro Interno",
+                            "Ocorreu um erro inesperado no servidor. Por favor, tente novamente mais tarde.",
+                            500
                     ));
         }
-    }
+}
+
+
 
 
