@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
-// Representa o corpo JSON que o Python espera, ex: {"comment": "Texto a ser analisado"}
+// Representa o corpo JSON que o Python espera, ex: {"comentario": "Texto a ser analisado"}
 @Data
 @NoArgsConstructor // Necessário para Jackson/deserialização
 @AllArgsConstructor // Útil para criar objetos facilmente
