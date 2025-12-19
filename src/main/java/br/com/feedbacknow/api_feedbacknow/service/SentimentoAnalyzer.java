@@ -2,18 +2,19 @@ package br.com.feedbacknow.api_feedbacknow.service;
 
 import br.com.feedbacknow.api_feedbacknow.dto.SentimentoRequest;
 import br.com.feedbacknow.api_feedbacknow.dto.SentimentoResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 @Service
 public class SentimentoAnalyzer {
 
+    private static final Logger logger = LoggerFactory.getLogger(SentimentoAnalyzer.class);
     private final RestTemplate restTemplate;
 
-    // Configuração do URL do serviço Python (pode ser lida do application.properties)
-    @Value("${python.sentiment.url:http://localhost:5000/comentario}")
+    @Value("${python.sentiment.url:http://localhost:5000/sentiment}")
     private String pythonServiceUrl;
 
     public SentimentoAnalyzer(RestTemplate restTemplate) {
@@ -21,33 +22,20 @@ public class SentimentoAnalyzer {
     }
 
     public SentimentoResponse analyzeComment(String comentario) {
-        // 1. Criar o objeto de requisição (payload)
         SentimentoRequest requestBody = new SentimentoRequest(comentario);
 
-        // 2. Configurar os headers
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        // 3. Criar a entidade da requisição (payload + headers)
-        HttpEntity<SentimentoRequest> requestEntity = new HttpEntity<>(requestBody, headers);
-
         try {
-            // 4. Enviar a requisição POST e mapear a resposta para SentimentResponse
-            ResponseEntity<SentimentoResponse> responseEntity = restTemplate.exchange(
-                    pythonServiceUrl,
-                    HttpMethod.POST,
-                    requestEntity,
-                    SentimentoResponse.class
-            );
-
-            // 5. Retornar o corpo da resposta
-            return responseEntity.getBody();
+            // Simplificado: postForObject já entende que deve enviar como JSON
+            // se o RestTemplate estiver configurado corretamente.
+            return restTemplate.postForObject(pythonServiceUrl, requestBody, SentimentoResponse.class);
 
         } catch (Exception e) {
-            // Logar o erro de comunicação
-            System.err.println("Erro ao se comunicar com o serviço Python em " + pythonServiceUrl + ": " + e.getMessage());
-            // Em um ambiente de produção, lance uma exceção de domínio ou implemente um circuito de segurança
-            return null;
+            // Log profissional com SLF4J
+            logger.error("Falha na comunicação com o serviço de IA em {}: {}", pythonServiceUrl, e.getMessage());
+
+            // Lançamos a exceção para que o CustomExceptionHandler assuma o controle
+            throw e;
         }
     }
 }
+
