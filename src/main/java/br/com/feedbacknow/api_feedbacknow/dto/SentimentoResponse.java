@@ -13,6 +13,8 @@ import java.time.LocalDateTime;
 @AllArgsConstructor // Útil para criar objetos facilmente
 public class SentimentoResponse {
 
+    private Long id;
+
     private String comentario;
     private String sentimento; // Ex: "positivo", "negativo", "neutro"
     private double probabilidade;
