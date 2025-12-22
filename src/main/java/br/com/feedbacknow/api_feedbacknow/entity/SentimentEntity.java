@@ -19,7 +19,7 @@ public class SentimentEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, columnDefinition = "TEXT")
+    @Column(name = "comentario", columnDefinition = "TEXT")
     private String comentario;
 
     @Enumerated(EnumType.STRING)
@@ -28,6 +28,10 @@ public class SentimentEntity {
 
     @Column(nullable = false)
     private Double probabilidade;
+
+    //topFeatures
+    @Column(nullable = true)
+    private String topFeatures;
 
     @CreationTimestamp
     @Column(nullable = false, updatable = false)
