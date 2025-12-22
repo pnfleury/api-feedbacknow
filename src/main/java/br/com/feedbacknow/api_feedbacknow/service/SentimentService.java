@@ -1,41 +1,41 @@
-package br.com.feedbacknow.api_feedbacknow.service;
+    package br.com.feedbacknow.api_feedbacknow.service;
 
-import br.com.feedbacknow.api_feedbacknow.domain.SentimentType;
-import br.com.feedbacknow.api_feedbacknow.dto.SentimentoResponse;
-import br.com.feedbacknow.api_feedbacknow.dto.StatsResponse;
-import br.com.feedbacknow.api_feedbacknow.entity.SentimentEntity;
-import br.com.feedbacknow.api_feedbacknow.repository.SentimentRepository;
-import org.springframework.stereotype.Service;
+    import br.com.feedbacknow.api_feedbacknow.domain.SentimentType;
+    import br.com.feedbacknow.api_feedbacknow.dto.SentimentoResponse;
+    import br.com.feedbacknow.api_feedbacknow.dto.StatsResponse;
+    import br.com.feedbacknow.api_feedbacknow.entity.SentimentEntity;
+    import br.com.feedbacknow.api_feedbacknow.repository.SentimentRepository;
+    import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
-import java.time.LocalDateTime;
+    import java.math.BigDecimal;
+    import java.math.RoundingMode;
+    import java.time.LocalDateTime;
 
-@Service
-public class SentimentService {
+    @Service
+    public class SentimentService {
 
-    private final SentimentRepository repository;
+        private final SentimentRepository repository;
 
-    public SentimentService(SentimentRepository repository) {
-        this.repository = repository;
-    }
-
-    // MÉTODO PARA SALVAR NO BANCO
-    public SentimentEntity saveSentiment(SentimentoResponse response) {
-
-        SentimentType tipo = SentimentType.valueOf(response.getSentimento().toUpperCase());
-        // 1. Converter a lista ["palavra1", "palavra2"] em "palavra1, palavra2"
-        String topFeaturesString = "";
-        if (response.getTopFeatures() != null && !response.getTopFeatures().isEmpty()) {
-            topFeaturesString = String.join(", ", response.getTopFeatures());
+        public SentimentService(SentimentRepository repository) {
+            this.repository = repository;
         }
 
-        SentimentEntity entity = new SentimentEntity();
-        entity.setComentario(response.getComentario());
-        entity.setSentimento(tipo);
-        entity.setProbabilidade(response.getProbabilidade());
-        entity.setCriadoEm(LocalDateTime.now());
-        entity.setTopFeatures(topFeaturesString);
+        // MÉTODO PARA SALVAR NO BANCO
+        public SentimentEntity saveSentiment(SentimentoResponse response) {
+
+            SentimentType tipo = SentimentType.valueOf(response.getSentimento().toUpperCase());
+            // 1. Converter a lista ["palavra1", "palavra2"] em "palavra1, palavra2"
+            String topFeaturesString = "";
+            if (response.getTopFeatures() != null && !response.getTopFeatures().isEmpty()) {
+                topFeaturesString = String.join(", ", response.getTopFeatures());
+            }
+
+            SentimentEntity entity = new SentimentEntity();
+            entity.setComentario(response.getComentario());
+            entity.setSentimento(tipo);
+            entity.setProbabilidade(response.getProbabilidade());
+            entity.setCriadoEm(LocalDateTime.now());
+            entity.setTopFeatures(topFeaturesString);
 
         return repository.save(entity);
     }

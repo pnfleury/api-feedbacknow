@@ -15,6 +15,7 @@ import java.util.List;
 @AllArgsConstructor // Útil para criar objetos facilmente
 public class SentimentoResponse {
 
+    private Long id;
     //@JsonProperty("comentario")
     private String comentario;
 
