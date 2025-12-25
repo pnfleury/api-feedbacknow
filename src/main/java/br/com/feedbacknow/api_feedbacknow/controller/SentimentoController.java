@@ -1,6 +1,7 @@
 package br.com.feedbacknow.api_feedbacknow.controller;
 
-
+import br.com.feedbacknow.api_feedbacknow.domain.SentimentType;
+import br.com.feedbacknow.api_feedbacknow.dto.PaginaResponse;
 import br.com.feedbacknow.api_feedbacknow.dto.SentimentoRequest;
 import br.com.feedbacknow.api_feedbacknow.dto.SentimentoResponse;
 import br.com.feedbacknow.api_feedbacknow.dto.StatsResponse;
@@ -8,15 +9,16 @@ import br.com.feedbacknow.api_feedbacknow.repository.SentimentRepository;
 import br.com.feedbacknow.api_feedbacknow.service.SentimentService;
 import br.com.feedbacknow.api_feedbacknow.service.SentimentoAnalyzer;
 import jakarta.validation.Valid;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import java.time.LocalDateTime;
-import java.util.List;
+
 
 @RestController
 @RequestMapping("/")
@@ -32,7 +34,8 @@ public class SentimentoController {
         this.repository = repository;
     }
 
-    @PostMapping("/sentiment")
+    // Envia o comentario para a api Flask
+    @PostMapping ("/sentiment")
     public ResponseEntity<SentimentoResponse> analyze(@Valid @RequestBody SentimentoRequest request) {
 
         // Chama o serviço que se comunica com o Flask
@@ -44,51 +47,81 @@ public class SentimentoController {
                     status(HttpStatus.SERVICE_UNAVAILABLE)
                     .build();
         }
-        //define (data e hora)
-        response.setTimestamp(LocalDateTime.now());
         // salva as informacoes no banco
         sentimentService.saveSentiment(response);
 
         response.setTimestamp(LocalDateTime.now());
         // Retorna a resposta do Python com status 200 OK
-        return ResponseEntity.ok(response);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
-    @GetMapping("/stats")
+
+    // BUSCA ESTATISTICAS NO BANCO
+    @GetMapping("sentiments/stats")
     public ResponseEntity<StatsResponse> getStats(
-            @RequestParam(required = false) Integer dias
-    ) {
+            @RequestParam(required = false) Integer dias) {
         return ResponseEntity.ok(sentimentService.obterEstatisticas(dias));
     }
 
-    @GetMapping("/sentiments")
-    public Page<SentimentoResponse> listar(
-            @PageableDefault(page = 0, size = 10, sort = {"criadoEm"})
-            Pageable paginacao) {
+    // LISTA REGISTROS DO BANCO
+    @GetMapping ("/sentiments")
+    public ResponseEntity<PaginaResponse<SentimentoResponse>> listar(
+            @ParameterObject @PageableDefault(page = 0,
+                    size = 10,
+                    sort = "criadoEm",
+                    direction = Sort.Direction.DESC ) Pageable paginacao) {
 
-        return repository.findAll(paginacao)
-                .map(entity -> new SentimentoResponse(
-                        entity.getId(),
-                        entity.getComentario(),
-                        entity.getSentimento().name(),
-                        entity.getProbabilidade(),
-                        entity.getTopFeatures() != null ? List.of(entity.getTopFeatures().split(",")) : null,
-                        entity.getCriadoEm()
-                ));
+        // Busca a página completa
+        Page<SentimentoResponse> paginaResultado = sentimentService.listarTodos(paginacao);
+
+        // Converte para o seu formato enxuto (usando os mesmos nomes que definimos antes)
+        PaginaResponse<SentimentoResponse> respostaEnxuta = new PaginaResponse<>(
+                paginaResultado.getContent(),
+                paginaResultado.getNumber(),
+                paginaResultado.getTotalElements(),
+                paginaResultado.getTotalPages()
+        );
+
+        return ResponseEntity.ok(respostaEnxuta);
     }
 
-    @GetMapping("/sentiment/{id}")// http://localhost:8080/sentiment/1
+    // LISTA REGISTRO DO BANCO POR ID
+    @GetMapping("sentiment/{id}")
     public ResponseEntity<SentimentoResponse> buscarPorId(@PathVariable Long id) {
-        return repository.findById(id)
-                .map(entity -> ResponseEntity.ok(new SentimentoResponse(
-                        entity.getId(),
-                        entity.getComentario(),
-                        entity.getSentimento().name(),
-                        entity.getProbabilidade(),
-                        entity.getTopFeatures() != null ? List.of(entity.getTopFeatures().split(",")) : null,
-                        entity.getCriadoEm()
-                )))
+        return sentimentService.buscarPorId(id)
+                .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
+
+    // LISTA TODOS OS REGISTROS DO BANCO COM O SENTIMENTO X
+    @GetMapping("/estado/{sentimentoStr}")
+    public ResponseEntity<PaginaResponse<SentimentoResponse>> filtrarPorSentimento(
+            @PathVariable String sentimentoStr, // Recebe como String
+            @ParameterObject @PageableDefault(size = 10,
+                    page = 0,
+                    sort = "criadoEm",
+                    direction = Sort.Direction.DESC ) Pageable paginacao) {
+
+        // Converte aqui para maiúsculas para bater com o Enum
+        SentimentType tipo = SentimentType.valueOf(sentimentoStr.toUpperCase());
+
+        // Pegamos a página completa do Service
+        Page<SentimentoResponse> paginaResultado = sentimentService.buscarPorSentimento(tipo, paginacao);
+
+        // Criamos a resposta enxuta manualmente
+        PaginaResponse<SentimentoResponse> respostaEnxuta = new PaginaResponse<>(
+                paginaResultado.getContent(),
+                paginaResultado.getNumber(),
+                paginaResultado.getTotalElements(),
+                paginaResultado.getTotalPages()
+        );
+
+        return ResponseEntity.ok(respostaEnxuta);
+    }
+
+    @GetMapping ("/health")
+        public ResponseEntity<String> health(){
+            return ResponseEntity.ok("OK");
+        }
 }
 
 

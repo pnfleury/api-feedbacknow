@@ -1,7 +1,5 @@
-package br.com.feedbacknow.api_feedbacknow.entity;
+package br.com.feedbacknow.api_feedbacknow.domain;
 
-import br.com.feedbacknow.api_feedbacknow.domain.Sentiment;
-import br.com.feedbacknow.api_feedbacknow.domain.SentimentType;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -29,7 +27,6 @@ public class SentimentEntity {
     @Column(nullable = false)
     private Double probabilidade;
 
-    //topFeatures
     @Column(nullable = true)
     private String topFeatures;
 

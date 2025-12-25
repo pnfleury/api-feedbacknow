@@ -5,6 +5,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 
@@ -12,7 +13,7 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableWebSecurity
 public class SecurityConfig {
 
-    //TRATADOR de erro de login
+    //Tratador de erros do login
     @Bean
     public AuthenticationEntryPoint authenticationEntryPoint() {
         return (request, response, authException) -> {
@@ -22,15 +23,18 @@ public class SecurityConfig {
         };
     }
 
-    //Definimos a Filter Chain
+    //Filter Chain definida
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.disable()) // APIs REST não precisam de CSRF
-                .authorizeHttpRequests(auth -> auth
-                        .anyRequest().authenticated() // Bloqueia tudo por padrão
-                )
-                // Aqui dizemos ao Spring para usar o nosso tratador de erro no Login Básico
+                .cors(cors -> cors.configure(http))
+                .csrf(AbstractHttpConfigurer::disable) // APIs REST não precisam de CSRF
+                .authorizeHttpRequests(req -> {
+                    // Estas linhas permitem que a TELA do Swagger carregue
+                    req.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll();
+                    req.anyRequest().authenticated();
+                })
+                // Spring vai usar o tratador de erro (acima) no login básico
                 .httpBasic(basic -> basic.authenticationEntryPoint(authenticationEntryPoint()));
 
         return http.build();

@@ -14,7 +14,7 @@ public class SentimentoAnalyzer {
     private static final Logger logger = LoggerFactory.getLogger(SentimentoAnalyzer.class);
     private final RestTemplate restTemplate;
 
-    @Value("${python.sentiment.url:http://localhost:5000/comentario}")
+    @Value("${python.sentiment.url:http://localhost:5000/sentiment}")
     private String pythonServiceUrl;
 
     public SentimentoAnalyzer(RestTemplate restTemplate) {

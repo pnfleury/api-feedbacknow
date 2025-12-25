@@ -9,10 +9,12 @@ public class CorsConfiguration implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry){
-        registry.addMapping("/**")
-                .allowedOrigins("http://localhost:3000")
+        registry.addMapping("/**").allowedOrigins(
+                "http://localhost:8501", // Streamlit default
+                "http://127.0.0.1:8501"  // Streamlit IP alternativo
+                )
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                .allowedOriginPatterns("*");
-
+                .allowedHeaders("*");
     }
 }
+

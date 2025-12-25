@@ -11,18 +11,14 @@ import java.util.List;
 
 // Representa o corpo JSON que o Python retorna, ex: {"sentimento": "positivo", "probability": 0.95}
 @Data
-@NoArgsConstructor // Necessário para Jackson/deserialização
-@AllArgsConstructor // Útil para criar objetos facilmente
+@NoArgsConstructor
+@AllArgsConstructor
 public class SentimentoResponse {
 
     private Long id;
-    //@JsonProperty("comentario")
     private String comentario;
-
     private String sentimento; // Ex: "positivo" ou "negativo"
     private double probabilidade;
-
-    // Teste de implementação do TopFeatures
     private List<String> topFeatures;
 
     @JsonFormat(pattern = "dd/MM/yyyy HH:mm")// determina data e hora apenas
