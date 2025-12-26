@@ -6,6 +6,7 @@ import br.com.feedbacknow.api_feedbacknow.dto.SentimentoRequest;
 import br.com.feedbacknow.api_feedbacknow.dto.SentimentoResponse;
 import br.com.feedbacknow.api_feedbacknow.dto.StatsResponse;
 import br.com.feedbacknow.api_feedbacknow.repository.SentimentRepository;
+import br.com.feedbacknow.api_feedbacknow.service.BatchService;
 import br.com.feedbacknow.api_feedbacknow.service.SentimentService;
 import br.com.feedbacknow.api_feedbacknow.service.SentimentoAnalyzer;
 import jakarta.validation.Valid;
@@ -15,44 +16,54 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
 import java.time.LocalDateTime;
+import java.util.List;
 
 
 @RestController
 @RequestMapping("/")
-public class SentimentoController {
+public class SentimentoController  {
 
     private final SentimentoAnalyzer sentimentoAnalyzer;
     private final SentimentService sentimentService;
-    private final SentimentRepository repository;
+    //private final SentimentRepository repository;
+    private final BatchService batchService;
 
-    public SentimentoController(SentimentoAnalyzer sentimentoAnalyzer, SentimentService sentimentService, SentimentRepository repository) {
+    // Construtor manual (faz exatamente o que o Lombok faria)
+
+    public SentimentoController(SentimentoAnalyzer sentimentoAnalyzer, SentimentService sentimentService, SentimentRepository repository, BatchService batchService) {
         this.sentimentoAnalyzer = sentimentoAnalyzer;
         this.sentimentService = sentimentService;
-        this.repository = repository;
+       // this.repository = repository;
+        this.batchService = batchService;
     }
 
     // Envia o comentario para a api Flask
-    @PostMapping ("/sentiment")
+    @PostMapping("/sentiment")
     public ResponseEntity<SentimentoResponse> analyze(@Valid @RequestBody SentimentoRequest request) {
 
-        // Chama o serviço que se comunica com o Flask
-        SentimentoResponse response = sentimentoAnalyzer.analyzeComment(request.getComentario());
-
-        if (response == null) {
-            // Retorna erro se a comunicação falhou ou o Python retornou algo inesperado
-            return ResponseEntity.
-                    status(HttpStatus.SERVICE_UNAVAILABLE)
-                    .build();
+        // 1. Recebe a análise da IA (ainda sem ID/Data)
+        SentimentoResponse responseIA = sentimentoAnalyzer.analyzeComment(request.comentario());
+        if (responseIA == null) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
         }
-        // salva as informacoes no banco
-        sentimentService.saveSentiment(response);
+        // 2. SALVA e CAPTURA o novo objeto que o Service criou com os dados do banco
+        SentimentoResponse responseSalva = sentimentService.saveSentiment(responseIA);
 
-        response.setTimestamp(LocalDateTime.now());
-        // Retorna a resposta do Python com status 200 OK
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        // 3. RETORNA o objeto que tem o ID (responseSalva) e não o original (responseIA)
+        return ResponseEntity.status(HttpStatus.CREATED).body(responseSalva);
+    }
+
+    // Envia lote de comentarios csv para a api Flask
+    @PostMapping(value = "/batch", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<List<SentimentoResponse>> processarLote(@RequestParam("file") MultipartFile file) {
+        List<SentimentoResponse> resultados = batchService.processarCsv(file);
+        return ResponseEntity.ok(resultados);
     }
 
     // BUSCA ESTATISTICAS NO BANCO

@@ -2,6 +2,7 @@ package br.com.feedbacknow.api_feedbacknow.config;
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.info.Contact;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import org.springframework.context.annotation.Bean;
@@ -15,7 +16,10 @@ public class SpringDocConfig {
         return new OpenAPI()
                 .info(new Info()
                         .title("FeedbackNow API")
-                        .version("v1"))
+                        .version("v1")
+                        .contact(new Contact()
+                                .name("Equipe FeedbackNow")
+                                .email("email@gmail.com")))
                 // Adiciona a definição de segurança
                 .components(new Components()
                         .addSecuritySchemes("basicScheme",

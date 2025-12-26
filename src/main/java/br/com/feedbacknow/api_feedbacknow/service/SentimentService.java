@@ -25,30 +25,38 @@
             this.repository = repository;
         }
 
-        // MÉTODO PARA SALVAR NO BANCO
-        public SentimentoResponse saveSentiment(SentimentoResponse response) {
+    // MÉTODO PARA SALVAR NO BANCO
+    public SentimentoResponse saveSentiment(SentimentoResponse response) {
 
-            SentimentType tipo = SentimentType.valueOf(response.getSentimento().toUpperCase());
-            // 1. Converter a lista ["palavra1", "palavra2"] em "palavra1, palavra2"
-            String topFeaturesString = "";
-            if (response.getTopFeatures() != null && !response.getTopFeatures().isEmpty()) {
-                topFeaturesString = String.join(", ", response.getTopFeatures());
-            }
+        SentimentType tipo = SentimentType.valueOf(response.sentimento().toUpperCase());
 
-            SentimentEntity entity = new SentimentEntity();
-            entity.setComentario(response.getComentario());
-            entity.setSentimento(tipo);
-            entity.setProbabilidade(response.getProbabilidade());
-            entity.setCriadoEm(LocalDateTime.now());
-            entity.setTopFeatures(topFeaturesString);
+        // 1. Converter a lista ["palavra1", "palavra2"] em "palavra1, palavra2" para o banco
+        String topFeaturesString = "";
+        if (response.topFeatures() != null && !response.topFeatures().isEmpty()) {
+            topFeaturesString = String.join(", ", response.topFeatures());
+        }
 
-            SentimentEntity salva = repository.save(entity);
-            // Antes de sair, atualiza o DTO original com o ID gerado e a data
-            response.setId(salva.getId());
-            response.setTimestamp(salva.getCriadoEm());
+        SentimentEntity entity = new SentimentEntity();
+        entity.setComentario(response.comentario());
+        entity.setSentimento(tipo);
+        entity.setProbabilidade(response.probabilidade());
+        entity.setCriadoEm(LocalDateTime.now()); // Aqui definimos o timestamp
+        entity.setTopFeatures(topFeaturesString);
 
-            return response;
+        // 2. SALVAMENTO: O 'salva' agora contém o ID gerado pelo banco
+        SentimentEntity salva = repository.save(entity);
+
+        // 3. RETORNO: Criamos o Record final com ID e Data reais
+        return new SentimentoResponse(
+                salva.getId(),
+                salva.getComentario(),
+                salva.getSentimento().name(),
+                salva.getProbabilidade(),
+                response.topFeatures(), // Reutilizamos a lista que já veio no request
+                salva.getCriadoEm()     // O timestamp que acabamos de salvar
+        );
     }
+
 
     // MÉTODO PARA GERAR ESTATÍSTICAS GERAIS OU POR DIAS
     public StatsResponse obterEstatisticas(Integer dias) {
