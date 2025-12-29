@@ -13,28 +13,49 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableWebSecurity
 public class SecurityConfig {
 
-    //Tratador de erros do login
+    // Tratador de erros de autenticação
     @Bean
     public AuthenticationEntryPoint authenticationEntryPoint() {
         return (request, response, authException) -> {
             response.setContentType("application/json;charset=UTF-8");
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.getWriter().write("{\"erro\": \"Não autorizado\", \"detalhe\": \"Usuário ou senha inválidos ou ausentes.\"}");
+            response.getWriter().write(
+                    "{\"erro\": \"Não autorizado\", \"detalhe\": \"Usuário ou senha inválidos ou ausentes.\"}"
+            );
         };
     }
 
-    //Filter Chain definida
+    // Security Filter Chain
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
+                // CORS (mantido como você já tinha)
                 .cors(cors -> cors.configure(http))
-                .csrf(AbstractHttpConfigurer::disable) // APIs REST não precisam de CSRF
-                .authorizeHttpRequests(req -> {
-                    // Estas linhas permitem que a TELA do Swagger carregue
-                    req.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll();
-                    req.anyRequest().authenticated();
-                })
-                // Spring vai usar o tratador de erro (acima) no login básico
+
+                // CSRF desabilitado (obrigatório para webhooks)
+                .csrf(AbstractHttpConfigurer::disable)
+
+                // Regras de autorização
+                .authorizeHttpRequests(req -> req
+
+                        // 🔓 LIBERA WEBHOOKS (ngrok / Facebook / Instagram)
+                        .requestMatchers(
+                                "/webhook/**",
+                                "/health"
+                        ).permitAll()
+
+                        // 🔓 LIBERA SWAGGER
+                        .requestMatchers(
+                                "/v3/api-docs/**",
+                                "/swagger-ui/**",
+                                "/swagger-ui.html"
+                        ).permitAll()
+
+                        // 🔒 TODO O RESTO exige autenticação
+                        .anyRequest().authenticated()
+                )
+
+                // Autenticação básica com handler customizado
                 .httpBasic(basic -> basic.authenticationEntryPoint(authenticationEntryPoint()));
 
         return http.build();

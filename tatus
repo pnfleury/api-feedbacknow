@@ -1,0 +1,320 @@
+[1mdiff --git a/.gitignore b/.gitignore[m
+[1mindex cce3969..bbd044b 100644[m
+[1m--- a/.gitignore[m
+[1m+++ b/.gitignore[m
+[36m@@ -32,3 +32,13 @@[m [mbuild/[m
+ ### VS Code ###[m
+ .vscode/[m
+ /logs/[m
+[32m+[m[32m# Arquivos de configuração sensíveis[m
+[32m+[m[32m.env[m
+[32m+[m[32m.env.local[m
+[32m+[m[32m.env.*.local[m
+[32m+[m[32mapplication-*.properties[m
+[32m+[m[32m!application-example.properties[m
+[32m+[m
+[32m+[m[32m# Tokens e chaves[m
+[32m+[m[32m*.key[m
+[32m+[m[32m*.pem[m
+\ No newline at end of file[m
+[1mdiff --git a/pom.xml b/pom.xml[m
+[1mindex b12761d..8c19dd2 100644[m
+[1m--- a/pom.xml[m
+[1m+++ b/pom.xml[m
+[36m@@ -70,6 +70,8 @@[m
+ 			<artifactId>postgresql</artifactId>[m
+ 			<scope>runtime</scope>[m
+ 		</dependency>[m
+[32m+[m
+[32m+[m
+ 		<dependency>[m
+ 			<groupId>io.jsonwebtoken</groupId>[m
+ 			<artifactId>jjwt-api</artifactId>[m
+[36m@@ -87,6 +89,12 @@[m
+ 			<version>0.11.5</version>[m
+ 			<scope>runtime</scope>[m
+ 		</dependency>[m
+[32m+[m		[32m<dependency>[m
+[32m+[m			[32m<groupId>commons-codec</groupId>[m
+[32m+[m			[32m<artifactId>commons-codec</artifactId>[m
+[32m+[m			[32m<version>1.15</version>[m
+[32m+[m		[32m</dependency>[m
+[32m+[m
+ 		<dependency>[m
+ 			<groupId>org.springdoc</groupId>[m
+ 			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>[m
+[1mdiff --git a/src/main/java/br/com/feedbacknow/api_feedbacknow/ApiFeedbacknowApplication.java b/src/main/java/br/com/feedbacknow/api_feedbacknow/ApiFeedbacknowApplication.java[m
+[1mindex bdebf46..bb5e228 100644[m
+[1m--- a/src/main/java/br/com/feedbacknow/api_feedbacknow/ApiFeedbacknowApplication.java[m
+[1m+++ b/src/main/java/br/com/feedbacknow/api_feedbacknow/ApiFeedbacknowApplication.java[m
+[36m@@ -1,7 +1,10 @@[m
+ package br.com.feedbacknow.api_feedbacknow;[m
+ [m
+[32m+[m[32mimport br.com.feedbacknow.api_feedbacknow.service.SocialMediaService;[m
+[32m+[m[32mimport jakarta.annotation.PostConstruct;[m
+ import org.springframework.boot.SpringApplication;[m
+ import org.springframework.boot.autoconfigure.SpringBootApplication;[m
+[32m+[m[32mimport org.springframework.scheduling.annotation.EnableScheduling;[m
+ [m
+ @SpringBootApplication[m
+ public class ApiFeedbacknowApplication {[m
+[1mdiff --git a/src/main/java/br/com/feedbacknow/api_feedbacknow/config/SecurityConfig.java b/src/main/java/br/com/feedbacknow/api_feedbacknow/config/SecurityConfig.java[m
+[1mindex 14a8b23..6cac232 100644[m
+[1m--- a/src/main/java/br/com/feedbacknow/api_feedbacknow/config/SecurityConfig.java[m
+[1m+++ b/src/main/java/br/com/feedbacknow/api_feedbacknow/config/SecurityConfig.java[m
+[36m@@ -32,6 +32,9 @@[m [mpublic class SecurityConfig {[m
+                 .authorizeHttpRequests(req -> {[m
+                     // Estas linhas permitem que a TELA do Swagger carregue[m
+                     req.requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll();[m
+[32m+[m
+[32m+[m[32m                    req.requestMatchers("/webhook", "/webhook/**").permitAll();[m
+[32m+[m
+                     req.anyRequest().authenticated();[m
+                 })[m
+                 // Spring vai usar o tratador de erro (acima) no login básico[m
+[1mdiff --git a/src/main/java/br/com/feedbacknow/api_feedbacknow/controller/AlertControlller.java b/src/main/java/br/com/feedbacknow/api_feedbacknow/controller/AlertControlller.java[m
+[1mnew file mode 100644[m
+[1mindex 0000000..6af848f[m
+[1m--- /dev/null[m
+[1m+++ b/src/main/java/br/com/feedbacknow/api_feedbacknow/controller/AlertControlller.java[m
+[36m@@ -0,0 +1,23 @@[m
+[32m+[m[32mpackage br.com.feedbacknow.api_feedbacknow.controller;[m
+[32m+[m
+[32m+[m[32mimport br.com.feedbacknow.api_feedbacknow.service.AlertService;[m
+[32m+[m[32mimport org.springframework.web.bind.annotation.GetMapping;[m
+[32m+[m[32mimport org.springframework.web.bind.annotation.RequestMapping;[m
+[32m+[m[32mimport org.springframework.web.bind.annotation.RestController;[m
+[32m+[m[32mimport org.springframework.web.servlet.mvc.method.annotation.SseEmitter;[m
+[32m+[m
+[32m+[m[32m@RestController[m
+[32m+[m[32m@RequestMapping("/notifications")[m
+[32m+[m[32mpublic class AlertControlller {[m
+[32m+[m
+[32m+[m[32m    private final AlertService alertService;[m
+[32m+[m
+[32m+[m[32m    public AlertControlller(AlertService alertService) {[m
+[32m+[m[32m        this.alertService = alertService;[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    @GetMapping("/alerts")[m
+[32m+[m[32m    public SseEmitter streamAlerts() {[m
+[32m+[m[32m        return alertService.registerEmitter();[m
+[32m+[m[32m    }[m
+[32m+[m[32m}[m
+[1mdiff --git a/src/main/java/br/com/feedbacknow/api_feedbacknow/controller/ConfigCheckController.java b/src/main/java/br/com/feedbacknow/api_feedbacknow/controller/ConfigCheckController.java[m
+[1mnew file mode 100644[m
+[1mindex 0000000..23e4703[m
+[1m--- /dev/null[m
+[1m+++ b/src/main/java/br/com/feedbacknow/api_feedbacknow/controller/ConfigCheckController.java[m
+[36m@@ -0,0 +1,26 @@[m
+[32m+[m[32mpackage br.com.feedbacknow.api_feedbacknow.controller;[m
+[32m+[m
+[32m+[m[32mimport org.springframework.beans.factory.annotation.Value;[m
+[32m+[m[32mimport org.springframework.web.bind.annotation.GetMapping;[m
+[32m+[m[32mimport org.springframework.web.bind.annotation.RestController;[m
+[32m+[m
+[32m+[m[32mimport java.util.Map;[m
+[32m+[m
+[32m+[m[32m@RestController[m
+[32m+[m[32mpublic class ConfigCheckController {[m
+[32m+[m
+[32m+[m[32m    @Value("${instagram.api.access-token}")[m
+[32m+[m[32m    private String accessToken;[m
+[32m+[m
+[32m+[m[32m    @Value("${instagram.webhook.verify-token}")[m
+[32m+[m[32m    private String verifyToken;[m
+[32m+[m
+[32m+[m[32m    @GetMapping("/api/config/check")[m
+[32m+[m[32m    public Map<String, String> checkConfig(){[m
+[32m+[m[32m        return Map.of([m
+[32m+[m[32m                "accessToken", accessToken != null ? "***" + accessToken.substring(Math.max(0, accessToken.length() - 4)) : "NULL",[m
+[32m+[m[32m                "verifyToken", verifyToken != null ? "***" + verifyToken.substring(Math.max(0, verifyToken.length() - 4)) : "NULL",[m
+[32m+[m[32m                "message", "Configurações carregadas com sucesso!"[m
+[32m+[m[32m        );[m
+[32m+[m[32m    }[m
+[32m+[m[32m}[m
+[1mdiff --git a/src/main/java/br/com/feedbacknow/api_feedbacknow/controller/DebugController.java b/src/main/java/br/com/feedbacknow/api_feedbacknow/controller/DebugController.java[m
+[1mnew file mode 100644[m
+[1mindex 0000000..35afcc6[m
+[1m--- /dev/null[m
+[1m+++ b/src/main/java/br/com/feedbacknow/api_feedbacknow/controller/DebugController.java[m
+[36m@@ -0,0 +1,43 @@[m
+[32m+[m[32mpackage br.com.feedbacknow.api_feedbacknow.controller;[m
+[32m+[m
+[32m+[m
+[32m+[m[32mimport br.com.feedbacknow.api_feedbacknow.dto.SentimentoResponse;[m
+[32m+[m[32mimport br.com.feedbacknow.api_feedbacknow.service.SocialMediaService;[m
+[32m+[m[32mimport org.springframework.http.ResponseEntity;[m
+[32m+[m[32mimport org.springframework.web.bind.annotation.PostMapping;[m
+[32m+[m[32mimport org.springframework.web.bind.annotation.RequestBody;[m
+[32m+[m[32mimport org.springframework.web.bind.annotation.RequestMapping;[m
+[32m+[m[32mimport org.springframework.web.bind.annotation.RestController;[m
+[32m+[m
+[32m+[m[32mimport java.util.Map;[m
+[32m+[m
+[32m+[m[32m@RestController[m
+[32m+[m[32m@RequestMapping("/debug")[m
+[32m+[m[32mpublic class DebugController {[m
+[32m+[m
+[32m+[m
+[32m+[m[32m    private final SocialMediaService socialMediaService;[m
+[32m+[m
+[32m+[m[32m    public DebugController(SocialMediaService socialMediaService){[m
+[32m+[m[32m        this.socialMediaService = socialMediaService;[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    @PostMapping("/comentario")[m
+[32m+[m[32m    public ResponseEntity<String> testarComentario(@RequestBody Map<String, String> body) {[m
+[32m+[m
+[32m+[m[32m        String comentario = body.get("texto");[m
+[32m+[m
+[32m+[m[32m        SentimentoResponse analise =[m
+[32m+[m[32m                socialMediaService.analisarSentimento(comentario);[m
+[32m+[m
+[32m+[m[32m        socialMediaService.salvarComentario([m
+[32m+[m[32m                "post_debug",[m
+[32m+[m[32m                "user_debug",[m
+[32m+[m[32m                "Everton",[m
+[32m+[m[32m                comentario,[m
+[32m+[m[32m                analise[m
+[32m+[m[32m        );[m
+[32m+[m
+[32m+[m[32m        return ResponseEntity.ok("Salvo com sucesso");[m
+[32m+[m[32m    }[m
+[32m+[m[32m}[m
+[1mdiff --git a/src/main/java/br/com/feedbacknow/api_feedbacknow/controller/FacebookWebhookController.java b/src/main/java/br/com/feedbacknow/api_feedbacknow/controller/FacebookWebhookController.java[m
+[1mnew file mode 100644[m
+[1mindex 0000000..a361d2a[m
+[1m--- /dev/null[m
+[1m+++ b/src/main/java/br/com/feedbacknow/api_feedbacknow/controller/FacebookWebhookController.java[m
+[36m@@ -0,0 +1,128 @@[m
+[32m+[m[32mpackage br.com.feedbacknow.api_feedbacknow.controller;[m
+[32m+[m
+[32m+[m[32mimport br.com.feedbacknow.api_feedbacknow.domain.SentimentEntity;[m
+[32m+[m[32mimport br.com.feedbacknow.api_feedbacknow.entity.MessageEntity;[m
+[32m+[m[32mimport br.com.feedbacknow.api_feedbacknow.repository.SentimentRepository;[m
+[32m+[m[32mimport br.com.feedbacknow.api_feedbacknow.service.AlertService;[m
+[32m+[m[32mimport br.com.feedbacknow.api_feedbacknow.service.SentimentService;[m
+[32m+[m
+[32m+[m[32mimport com.fasterxml.jackson.databind.JsonNode;[m
+[32m+[m[32mimport com.fasterxml.jackson.databind.ObjectMapper;[m
+[32m+[m[32mimport lombok.extern.slf4j.Slf4j;[m
+[32m+[m[32mimport org.springframework.beans.factory.annotation.Value;[m
+[32m+[m[32mimport org.springframework.http.HttpStatus;[m
+[32m+[m[32mimport org.springframework.http.ResponseEntity;[m
+[32m+[m[32mimport org.springframework.web.bind.annotation.*;[m
+[32m+[m
+[32m+[m[32mimport java.util.List;[m
+[32m+[m
+[32m+[m
+[32m+[m[32m@Slf4j[m
+[32m+[m[32m@RestController[m
+[32m+[m[32m@RequestMapping("/webhook")[m
+[32m+[m[32m@CrossOrigin(origins = "*")[m
+[32m+[m[32mpublic class FacebookWebhookController {[m
+[32m+[m
+[32m+[m
+[32m+[m[32m    private final SentimentService sentimentService;[m
+[32m+[m[32m    private final AlertService alertService;[m
+[32m+[m[32m    private final SentimentRepository sentimentRepository;[m
+[32m+[m
+[32m+[m
+[32m+[m[32m    @Value("${instagram.webhook.verify-token}")[m
+[32m+[m[32m    private String verifyToken;[m
+[32m+[m
+[32m+[m[32m    public FacebookWebhookController(SentimentService sentimentService,[m
+[32m+[m[32m                                     AlertService alertService,[m
+[32m+[m[32m                                     SentimentRepository sentimentRepository) {[m
+[32m+[m[32m        this.sentimentService = sentimentService;[m
+[32m+[m[32m        this.alertService = alertService;[m
+[32m+[m[32m        this.sentimentRepository = sentimentRepository;[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    /**[m
+[32m+[m[32m     * Validação do Webhook (GET)[m
+[32m+[m[32m     * Responde ao desafio da Meta para validar a URL.[m
+[32m+[m[32m     */[m
+[32m+[m[32m    @GetMapping[m
+[32m+[m[32m    public ResponseEntity<String> verifyWebhook([m
+[32m+[m[32m            @RequestParam(name = "hub.mode", required = false) String mode,[m
+[32m+[m[32m            @RequestParam(name = "hub.verify_token", required = false) String token,[m
+[32m+[m[32m            @RequestParam(name = "hub.challenge", required = false) String challenge[m
+[32m+[m[32m    ) {[m
+[32m+[m[32m        log.info("🔍 Validação solicitada. Token recebido: {}", token);[m
+[32m+[m
+[32m+[m[32m        if ("subscribe".equals(mode) && verifyToken.equals(token)) {[m
+[32m+[m[32m            return ResponseEntity.ok()[m
+[32m+[m[32m                    .header("Content-Type", "text/plain")[m
+[32m+[m[32m                    .header("ngrok-skip-browser-warning", "true")[m
+[32m+[m[32m                    .body(challenge);[m
+[32m+[m[32m        }[m
+[32m+[m[32m        return ResponseEntity.status(HttpStatus.FORBIDDEN).build();[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m[32m    /**[m
+[32m+[m[32m     * Recebimento de Eventos (POST)[m
+[32m+[m[32m     * Processa comentários do Instagram e Facebook.[m
+[32m+[m[32m     */[m
+[32m+[m[32m    @PostMapping[m
+[32m+[m[32m    public ResponseEntity<String> receiveWebhook(@RequestBody String payload) {[m
+[32m+[m[32m        log.info("📩 Novo evento recebido.");[m
+[32m+[m[32m        log.info("📦 CONTEÚDO BRUTO: [{}]", payload);[m
+[32m+[m
+[32m+[m[32m        try {[m
+[32m+[m[32m            ObjectMapper mapper = new ObjectMapper();[m
+[32m+[m[32m            JsonNode root = mapper.readTree(payload);[m
+[32m+[m
+[32m+[m[32m            String objectType = root.path("object").asText();[m
+[32m+[m[32m            log.info("ℹ️ Recebido objeto do tipo: {}", objectType);[m
+[32m+[m
+[32m+[m[32m            JsonNode entries = root.path("entry");[m
+[32m+[m[32m            for (JsonNode entry : entries) {[m
+[32m+[m[32m                JsonNode changes = entry.path("changes");[m
+[32m+[m
+[32m+[m[32m                if (changes.isMissingNode() || !changes.isArray()) {[m
+[32m+[m[32m                    log.info("pula o resto: Evento de notificação de alteração recebido.");[m
+[32m+[m[32m                    continue;[m
+[32m+[m[32m                }[m
+[32m+[m
+[32m+[m[32m                for (JsonNode change : changes) {[m
+[32m+[m[32m                    JsonNode value = change.path("value");[m
+[32m+[m[32m                    String texto = value.has("text") ? value.get("text").asText() : value.path("message").asText("");[m
+[32m+[m
+[32m+[m[32m                    if (texto.isEmpty()) {[m
+[32m+[m[32m                        log.info("pula o resto: Campo de texto está vazio.");[m
+[32m+[m[32m                        continue;[m
+[32m+[m[32m                    }[m
+[32m+[m
+[32m+[m[32m                    log.info("✅ Comentário real identificado: {}", texto);[m
+[32m+[m
+[32m+[m[32m                    // Extração de dados para o service[m
+[32m+[m[32m                    JsonNode from = value.path("from");[m
+[32m+[m[32m                    String userId = from.path("id").asText("N/A");[m
+[32m+[m[32m                    String username = from.has("username") ? from.get("username").asText() : from.path("name").asText("N/A");[m
+[32m+[m[32m                    String commentId = value.path("id").asText("N/A");[m
+[32m+[m
+[32m+[m[32m                    // Chame seus services aqui[m
+[32m+[m[32m                    sentimentService.analisarSentimento(texto, commentId, objectType.toUpperCase(), userId, username);[m
+[32m+[m[32m                }[m
+[32m+[m[32m            }[m
+[32m+[m[32m            return ResponseEntity.ok("EVENT_RECEIVED");[m
+[32m+[m[32m        } catch (Exception e) {[m
+[32m+[m[32m            log.error("❌ Erro: {}", e.getMessage());[m
+[32m+[m[32m            return ResponseEntity.ok("RECEIVED_WITH_LOG_ERROR");[m
+[32m+[m[32m        }[m
+[32m+[m[32m    } // FECHA O RECEIVEWEBHOOK AQUI[m
+[32m+[m
+[32m+[m[32m    // AGORA SIM, O MÉTODO DE LISTAGEM FORA DO POST[m
+[32m+[m[32m    @GetMapping("/dados")[m
+[32m+[m[32m    public ResponseEntity<List<SentimentEntity>> visualizarBanco() {[m
+[32m+[m[32m        log.info("📊 Consultando novos dados da Meta...");[m
+[32m+[m
+[32m+[m[32m        // Busca todos e você pode usar o Postman com ?sort=id,desc[m
+[32m+[m[32m        List<SentimentEntity> sentimentos = sentimentRepository.findAll();[m
+[32m+[m[32m        return ResponseEntity.ok(sentimentos);[m
+[32m+[m[32m    }[m
+[32m+[m
+[32m+[m
+[32m+[m[32m}[m
+[1mdiff --git a/src/main/java/br/com/feedbacknow/api_feedbacknow/dto/ComentarioDTO.java b/src/main/java/br/com/feedbacknow/api_feedbacknow/dto/ComentarioDTO.java[m
+[1mnew file mode 

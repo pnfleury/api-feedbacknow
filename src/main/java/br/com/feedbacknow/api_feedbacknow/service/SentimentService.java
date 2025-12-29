@@ -20,93 +20,88 @@
     public class SentimentService {
 
         private final SentimentRepository repository;
+        private AlertService alertService;
 
-        public SentimentService(SentimentRepository repository) {
+
+        public SentimentService(SentimentRepository repository, AlertService alertService) {
             this.repository = repository;
+            this.alertService = alertService;
+
         }
 
-    // MÉTODO PARA SALVAR NO BANCO
-    public SentimentoResponse saveSentiment(SentimentoResponse response) {
+        // ==========================
+        // MÉTODOS EXISTENTES
+        // ==========================
+        public SentimentoResponse saveSentiment(SentimentoResponse response) {
 
-        SentimentType tipo = SentimentType.valueOf(response.sentimento().toUpperCase());
+            SentimentType tipo = SentimentType.valueOf(response.sentimento().toUpperCase());
 
-        // 1. Converter a lista ["palavra1", "palavra2"] em "palavra1, palavra2" para o banco
-        String topFeaturesString = "";
-        if (response.topFeatures() != null && !response.topFeatures().isEmpty()) {
-            topFeaturesString = String.join(", ", response.topFeatures());
+            String topFeaturesString = "";
+            if (response.topFeatures() != null && !response.topFeatures().isEmpty()) {
+                topFeaturesString = String.join(", ", response.topFeatures());
+            }
+
+            SentimentEntity entity = new SentimentEntity();
+            entity.setComentario(response.comentario());
+            entity.setSentimento(tipo);
+            entity.setProbabilidade(response.probabilidade());
+            entity.setCriadoEm(LocalDateTime.now());
+            entity.setTopFeatures(topFeaturesString);
+
+            SentimentEntity salva = repository.save(entity);
+
+            // 🔥 CRIA UM NOVO DTO (imutável)
+            return new SentimentoResponse(
+                    salva.getId(),
+                    salva.getComentario(),
+                    salva.getSentimento().name(),
+                    salva.getProbabilidade(),
+                    response.topFeatures(),
+                    salva.getCriadoEm()
+            );
+
         }
 
-        SentimentEntity entity = new SentimentEntity();
-        entity.setComentario(response.comentario());
-        entity.setSentimento(tipo);
-        entity.setProbabilidade(response.probabilidade());
-        entity.setCriadoEm(LocalDateTime.now()); // Aqui definimos o timestamp
-        entity.setTopFeatures(topFeaturesString);
+        public StatsResponse obterEstatisticas(Integer dias) {
+            long total;
+            long pos;
+            long neg;
 
-        // 2. SALVAMENTO: O 'salva' agora contém o ID gerado pelo banco
-        SentimentEntity salva = repository.save(entity);
+            if (dias == null || dias <= 0) {
+                total = repository.count();
+                pos = repository.countBySentimento(SentimentType.POSITIVO);
+                neg = repository.countBySentimento(SentimentType.NEGATIVO);
+            } else {
+                LocalDateTime dataCorte = LocalDateTime.now().minusDays(dias);
+                total = repository.countByCriadoEmAfter(dataCorte);
+                pos = repository.countBySentimentoAndCriadoEmAfter(SentimentType.POSITIVO, dataCorte);
+                neg = repository.countBySentimentoAndCriadoEmAfter(SentimentType.NEGATIVO, dataCorte);
+            }
 
-        // 3. RETORNO: Criamos o Record final com ID e Data reais
-        return new SentimentoResponse(
-                salva.getId(),
-                salva.getComentario(),
-                salva.getSentimento().name(),
-                salva.getProbabilidade(),
-                response.topFeatures(), // Reutilizamos a lista que já veio no request
-                salva.getCriadoEm()     // O timestamp que acabamos de salvar
-        );
-    }
+            if (total == 0) return new StatsResponse(0, 0, 0, 0.0, 0.0);
 
+            double percPos = BigDecimal.valueOf((pos * 100.0) / total)
+                    .setScale(2, RoundingMode.HALF_UP)
+                    .doubleValue();
+            double percNeg = BigDecimal.valueOf((neg * 100.0) / total)
+                    .setScale(2,RoundingMode.HALF_UP)
+                    .doubleValue();
 
-    // MÉTODO PARA GERAR ESTATÍSTICAS GERAIS OU POR DIAS
-    public StatsResponse obterEstatisticas(Integer dias) {
-        long total;
-        long pos;
-        long neg;
-
-        if (dias == null || dias <= 0) {
-            // Lógica para o BANCO TODO
-            total = repository.count();
-            pos = repository.countBySentimento(SentimentType.POSITIVO);
-            neg = repository.countBySentimento(SentimentType.NEGATIVO);
-        } else {
-            // Lógica para o FILTRO DE DIAS
-            LocalDateTime dataCorte = LocalDateTime.now().minusDays(dias);
-            total = repository.countByCriadoEmAfter(dataCorte);
-            pos = repository.countBySentimentoAndCriadoEmAfter(SentimentType.POSITIVO, dataCorte);
-            neg = repository.countBySentimentoAndCriadoEmAfter(SentimentType.NEGATIVO, dataCorte);
+            return new StatsResponse(total, pos, neg, percPos, percNeg);
         }
 
-        if (total == 0) return new StatsResponse(0, 0, 0, 0.0, 0.0);
-
-        // Cálculo com arredondamento garantido para 2 casas
-        double percPos = BigDecimal.valueOf((pos * 100.0) / total)
-                .setScale(2, RoundingMode.HALF_UP)
-                .doubleValue();
-        double percNeg = BigDecimal.valueOf((neg * 100.0) / total)
-                .setScale(2,RoundingMode.HALF_UP)
-                .doubleValue();
-
-        return new StatsResponse(total, pos, neg, percPos, percNeg);
-    }
-
-        // METODO PARA LISTAR TODOS OS REGISTROS
         public Page<SentimentoResponse> listarTodos(Pageable paginacao) {
             return repository.findAll(paginacao).map(this::mapToResponse);
         }
 
-        // METODO PARA BUSCAR POR ID
         public Optional<SentimentoResponse> buscarPorId(Long id) {
             return repository.findById(id).map(this::mapToResponse);
         }
 
-        // METODO PARA BUSCAR SENTIMENTO
         public Page<SentimentoResponse> buscarPorSentimento(SentimentType sentimento, Pageable pageable) {
-            return repository.findBySentimento(sentimento, pageable)
-                    .map(this::mapToResponse); // Converte cada item da página
+            return repository.findBySentimento(sentimento, pageable).map(this::mapToResponse);
         }
 
-        // MÉTODO PRIVADO DE CONVERSÃO (O mapeador centralizado)
         private SentimentoResponse mapToResponse(SentimentEntity entity) {
             return new SentimentoResponse(
                     entity.getId(),
@@ -117,4 +112,49 @@
                     entity.getCriadoEm()
             );
         }
-}
+
+
+        // NOVO MÉTODO PARA WEBHOOK
+
+        public void analisarSentimento(
+                String comentario,
+                String commentId,
+                String postId,
+                String userId,
+                String username
+        ) {
+            String texto = comentario.toLowerCase();
+
+            String sentimento;
+            double probabilidade;
+            List<String> features;
+
+            if (texto.contains("lixo") || texto.contains("ruim") || texto.contains("pessimo") || texto.contains("odiei")) {
+                sentimento = "NEGATIVO";
+                probabilidade = 0.99;
+                features = List.of("critica", "reclamacao");
+            } else if (texto.contains("excelente") || texto.contains("nota 10") || texto.contains("amei") || texto.contains("bom")) {
+                sentimento = "POSITIVO";
+                probabilidade = 0.98;
+                features = List.of("elogio", "satisfacao");
+            } else {
+                sentimento = "NEUTRO";
+                probabilidade = 0.50;
+                features = List.of("geral");
+            }
+
+            SentimentoResponse response = new SentimentoResponse(
+                    null,
+                    comentario,
+                    sentimento,
+                    probabilidade,
+                    features,
+                    LocalDateTime.now()
+            );
+
+            saveSentiment(response);
+
+            System.out.println("💬 Comentário analisado e salvo: " + comentario);
+        }
+
+    }
